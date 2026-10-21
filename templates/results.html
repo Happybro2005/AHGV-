@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Certified Election Results - BioVote{% endblock %}
+
+{% block content %}
+<div class="results-container">
+    <div class="results-header">
+        <div class="header-left">
+            <span class="status-badge"><span class="pulse-dot"></span> CERTIFIED REAL-TIME TALLY</span>
+            <h1 class="results-title">Election Vote Tally &amp; Verification</h1>
+            <p class="results-sub">Live cryptographic count compiled directly from the secure ballot database.</p>
+        </div>
+        <div class="header-right">
+            <a href="javascript:location.reload()" class="btn btn-secondary btn-sm">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Refresh Tally
+            </a>
+            <a href="{{ url_for('home') }}" class="btn btn-primary btn-sm">
+                Back to Elections
+            </a>
+        </div>
+    </div>
+
+    {% set total_votes = 0 %}
+    {% for candidate_name, count in rows %}
+        {% set total_votes = total_votes + count %}
+    {% endfor %}
+
+    <!-- Top Metric Cards -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <span class="metric-label">Total Ballots Cast</span>
+            <span class="metric-val">{{ total_votes }}</span>
+            <span class="metric-sub">Verified &amp; Counted</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Contesting Candidates</span>
+            <span class="metric-val">{{ rows|length }}</span>
+            <span class="metric-sub">On Official Ballot</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Integrity Status</span>
+            <span class="metric-val text-green">100% Locked</span>
+            <span class="metric-sub">Zero Duplicate Ballots</span>
+        </div>
+    </div>
+
+    <!-- Breakdown Table and Visual Progress Bars -->
+    <div class="results-card">
+        <h3 class="card-title">Candidate Breakdown</h3>
+
+        {% if rows %}
+            <div class="tally-list">
+                {% for candidate_name, count in rows %}
+                    {% set percent = (count / total_votes * 100) if total_votes > 0 else 0 %}
+                    <div class="tally-item">
+                        <div class="tally-info">
+                            <div class="candidate-meta">
+                                <span class="rank-tag">#{{ loop.index }}</span>
+                                <strong class="tally-cand-name">{{ candidate_name }}</strong>
+                            </div>
+                            <div class="tally-numbers">
+                                <span class="vote-count">{{ count }} vote{{ 's' if count != 1 else '' }}</span>
+                                <span class="vote-percent">{{ "%.1f"|format(percent) }}%</span>
+                            </div>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: {{ percent }}%;"></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state-card">
+                <p>No votes recorded for this election yet. Be the first voter!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

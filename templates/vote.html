@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Biometric Voting Booth - {{ election.title }}{% endblock %}
+
+{% block content %}
+<div class="booth-container">
+    <!-- Booth Header -->
+    <div class="booth-header">
+        <div class="booth-title-group">
+            <span class="booth-badge"><span class="pulse-dot"></span> SECURE ELECTRONIC BALLOT UNIT</span>
+            <h1 class="booth-title">{{ election.title }}</h1>
+            <p class="booth-sub">Step 1: Enter Voter ID &bull; Step 2: Biometric Scan Verification &bull; Step 3: Cast Ballot</p>
+        </div>
+        <div class="booth-timer" id="booth-timer">
+            <span class="timer-label">SESSION WINDOW</span>
+            <span class="timer-val" id="timer-display">60s</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('vote', election_id=election.id) }}" enctype="multipart/form-data" class="booth-form" id="vote-form">
+        <!-- Verification Step Section -->
+        <div class="booth-section">
+            <h3 class="step-heading">
+                <span class="step-num">1</span>
+                Voter Identity &amp; Biometric Scan
+            </h3>
+            <div class="step-grid">
+                <div class="form-group">
+                    <label for="reg_no">Enter Registered Voter ID <span class="req">*</span></label>
+                    <input type="text" id="reg_no" name="reg_no" placeholder="e.g. 2401640100996" required class="input-control input-lg">
+                    <span class="input-hint">Must match the registered Voter ID used during enrollment.</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Live Fingerprint Scan (.png / .jpg) <span class="req">*</span></label>
+                    <div class="scan-dropzone" onclick="document.getElementById('fingerprint').click()">
+                        <input type="file" id="fingerprint" name="fingerprint" accept="image/*" required style="display:none;" onchange="handleBoothFile(this)">
+                        <div id="booth-prompt" class="booth-prompt">
+                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none">
+                                <path d="M12 2a10 10 0 0 0-10 10v2a10 10 0 0 0 10 10 10 10 0 0 0 10-10v-2a10 10 0 0 0-10-10z"></path>
+                                <path d="M12 6a6 6 0 0 0-6 6v2"></path>
+                                <path d="M12 10a2 2 0 0 0-2 2v2"></path>
+                                <path d="M12 14v4"></path>
+                            </svg>
+                            <span>Click to upload probe scan (e.g. <code>voter1_probe.png</code>)</span>
+                        </div>
+                        <div id="booth-preview" style="display:none;" class="booth-preview">
+                            <img id="booth-thumb" src="#" alt="Scan Probe" class="scan-thumb">
+                            <span id="booth-filename" class="scan-name"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate Selection Section -->
+        <div class="booth-section">
+            <h3 class="step-heading">
+                <span class="step-num">2</span>
+                Choose Candidate / Ballot Symbol
+            </h3>
+
+            {% if candidates %}
+                <div class="candidates-cards-grid">
+                    {% for c in candidates %}
+                        <label class="candidate-radio-card" for="candidate_{{ c.id }}">
+                            <input type="radio" id="candidate_{{ c.id }}" name="candidate_id" value="{{ c.id }}" required class="card-radio-input">
+                            <div class="card-content">
+                                <div class="candidate-symbol-wrap">
+                                    {% if loop.index == 1 %}
+                                        <img src="{{ url_for('static', filename='images/party_a_logo.png') }}" alt="Logo" class="party-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                        <div class="party-fallback-badge bg-orange" style="display:none;">BJP</div>
+                                    {% elif loop.index == 2 %}
+                                        <img src="{{ url_for('static', filename='images/party_b_logo.png') }}" alt="Logo" class="party-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                        <div class="party-fallback-badge bg-green" style="display:none;">INC</div>
+                                    {% elif loop.index == 3 %}
+                                        <img src="{{ url_for('static', filename='images/party_c_logo.png') }}" alt="Logo" class="party-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                        <div class="party-fallback-badge bg-blue" style="display:none;">BSP</div>
+                                    {% else %}
+                                        <div class="party-fallback-badge bg-purple">IND</div>
+                                    {% endif %}
+                                </div>
+                                <div class="candidate-info">
+                                    <span class="ballot-num">Ballot #{{ loop.index }}</span>
+                                    <h4 class="candidate-name">{{ c.name }}</h4>
+                                    <span class="select-indicator">Click to Select Candidate</span>
+                                </div>
+                                <div class="check-circle">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state-card">
+                    <p>No candidates registered for this election.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Submit Button -->
+        <div class="booth-footer">
+            <button type="submit" class="btn btn-vote-submit btn-lg" id="submit-vote-btn">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Authenticate Biometrics &amp; Cast Vote
+            </button>
+            <p class="security-disclaimer">
+                🔒 Cryptographic Verification Notice: Upon casting, your biometric features are matched against stored descriptors. Your vote is recorded anonymously and your voter record is permanently locked from casting duplicate ballots.
+            </p>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function handleBoothFile(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('booth-thumb').src = e.target.result;
+            document.getElementById('booth-filename').textContent = file.name;
+            document.getElementById('booth-prompt').style.display = 'none';
+            document.getElementById('booth-preview').style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// 60-second voting timer
+let secondsLeft = 60;
+const timerEl = document.getElementById('timer-display');
+const countdown = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft <= 0) {
+        clearInterval(countdown);
+        timerEl.textContent = 'LOCKED';
+        timerEl.style.color = '#ef4444';
+        alert('Voting session has timed out for security. The booth is now resetting.');
+        window.location.href = "{{ url_for('home') }}";
+    } else {
+        timerEl.textContent = secondsLeft + 's';
+        if (secondsLeft <= 15) {
+            timerEl.style.color = '#ef4444';
+        }
+    }
+}, 1000);
+</script>
+{% endblock %}
